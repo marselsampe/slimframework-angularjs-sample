@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Latihan Slim Framework & Client AngularJS</title>
+	<script src="js/jquery-1.12.0.min.js"></script>
+	<link href="bootstrap-3.3.51/css/bootstrap.css" rel="stylesheet"/>
+	<script src="bootstrap-3.3.51/js/bootstrap.min.js"></script>
+	<!-- load angularjs -->
+	<script src="angular/angular.js"></script>
+
+	<!-- load angular-growl -->
+	<link href="angular-growl/growl.css" rel="stylesheet">
+	<script src="angular-growl/growl.js"></script>
+	<script src="angular-growl/growlDirective.js"></script>
+	<script src="angular-growl/growlFactory.js"></script>
+</head>
+
+<body>
+
+	<div class="container" data-ng-app="barangApp" data-ng-controller="barangCtrl">
+
+		<h1>Data Barang</h1>
+		<br/>
+		<div class="col-sm-12">
+			<button type="button" class="btn btn-primary" data-ng-click="showForm('add');">Tambah Barang</button>
+			<input type="textSearch" style="float:right; width:300px;" class="form-control" placeholder="Pencarian (Nama Barang)" data-ng-keyup="searchBarang();" data-ng-model="keyword">
+		</div>
+		<br/><br/>
+
+		<table class="table" cellspacing="0" width="100%">
+			<thead>
+				<tr>
+					<th>No.</th>
+					<th>Nama Barang</th>
+					<th>Kategori</th>
+					<th>Stok</th>
+					<th>Harga Beli</th>
+					<th>Harga Jual</th>
+					<th colspan="2">Action</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr data-ng-repeat="barang in data">
+					<td>{{ $index + 1 }}.</td>
+					<td>{{ barang.namaBarang }}</td>
+					<td>{{ barang.kategori }}</td>
+					<td>{{ barang.stok }}</td>
+					<td>{{ barang.hargaBeli }}</td>
+					<td>{{ barang.hargaJual }}</td>
+					<td>
+						<button class="btn btn-warning" data-ng-click="showForm('edit',barang.idBarang, $index)">EDIT</button>
+						<button class="btn btn-danger" data-ng-click="deleteBarang(barang.idBarang)">HAPUS</button>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<!-- Modal -->
+		<div class="modal fade" id="formModal" role="dialog">
+			<div class="modal-dialog">
+
+				<!-- Modal content-->
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title">{{formActionTitle}}</h4>
+					</div>
+					<div class="modal-body">
+						<form role="form">
+							<div class="form-group">
+								<label>Nama Barang :</label>
+								<input type="text" class="form-control" data-ng-model="dataform.namaBarang"/>
+								<input type="hidden" data-ng-model="dataform.idBarang" />
+							</div>
+							<div class="form-group">
+								<label>Kategori :</label>
+								<input type="text" class="form-control" data-ng-model="dataform.kategori" />
+							</div>
+							<div class="form-group">
+								<label>Stok :</label>
+								<input type="text" class="form-control" data-ng-model="dataform.stok" />
+							</div>
+							<div class="form-group">
+								<label>Harga Beli :</label>
+								<input type="text" class="form-control" data-ng-model="dataform.hargaBeli" />
+							</div>
+							<div class="form-group">
+								<label>Harga Jual :</label>
+								<input type="text" class="form-control" data-ng-model="dataform.hargaJual" />
+							</div>
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-success" data-ng-click="saveData()" data-ng-disabled="kunciTombol">Simpan</button>
+						<button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+					</div>
+				</div>
+				<!-- End of Modal content-->
+
+			</div>
+		</div>
+		<!-- End of Modal -->
+
+		<!-- Loading Animation -->
+		<div class="row-fluid" data-ng-if="loader">
+			<div style="text-align: center"><img src="image/loader.gif"/></div>
+		</div>
+
+		<!-- Angular-Growl Message -->
+		<div growl></div>
+
+	</div>
+
+
+</body>
+</html>
+
+<script>
+	var urlAPI = 'http://localhost:8080/slimframework/apitoko/';
+
+	var barangApp = angular.module('barangApp', ['angular-growl']);
+
+	barangApp.controller('barangCtrl', function($scope, $http, growl) {
+		$scope.loader   = true;
+		$scope.form     = false;
+		$scope.dataform = {};
+
+		$scope.loadBarang = function(){
+			$http.get(urlAPI+'/barang')
+			.then(
+				function(response) {
+					$scope.data = response.data;
+					$scope.loader = false;
+				},
+				function (response) {
+					var error="Error : " + response.data.error.text;
+					$scope.showErrorMessage(error,0);
+				});
+		};
+		$scope.loadBarang();
+
+        $scope.searchBarang = function(){
+        	var keyword=$scope.keyword;
+			$http.get(urlAPI+'/barang/search/'+keyword)
+			.then(
+				function(response) {
+					$scope.data = response.data;
+					$scope.loader = false;
+				},
+				function (response) {
+					var error="Error : " + response.data.error.text;
+					$scope.showErrorMessage(error,0);
+				});
+        };
+
+		$scope.showForm = function(action,idBarang,index){
+			$scope.action = action;
+			if(action == 'add'){
+				$scope.formActionTitle="Tambah Barang";
+				$scope.emptyForm();
+                $('#formModal').modal('show');  // Show modal formModal
+            }else if(action == 'edit'){
+            	$scope.formActionTitle="Edit Barang";
+            	$scope.dataform.idBarang = $scope.data[index]['idBarang'];
+            	$scope.dataform.namaBarang = $scope.data[index]['namaBarang'];
+            	$scope.dataform.kategori = $scope.data[index]['kategori'];
+            	$scope.dataform.stok = $scope.data[index]['stok'];
+            	$scope.dataform.hargaBeli = $scope.data[index]['hargaBeli'];
+            	$scope.dataform.hargaJual = $scope.data[index]['hargaJual'];
+                $('#formModal').modal('show');  // Show modal formModal
+            }
+        };
+
+        $scope.emptyForm = function(){
+        	$scope.dataform.idBarang = '';
+        	$scope.dataform.namaBarang = '';
+        	$scope.dataform.kategori = '';
+        	$scope.dataform.stok = '';
+        	$scope.dataform.hargaBeli = '';
+        	$scope.dataform.hargaJual = '';
+        }
+
+        $scope.saveData = function(){
+        	if($scope.action=='add'){
+        		$scope.insertBarang();
+        	}else{
+        		$scope.updateBarang();
+        	}
+        }
+
+        $scope.insertBarang = function(){
+        	if(confirm('Yakin simpan data ini ?')){
+        		$scope.kunciTombol = true;
+        		$http.post(urlAPI +'/barang', $scope.dataform)
+        		.then(
+        			function(response){
+        				if(response){
+        					$scope.loadBarang();
+        					$scope.emptyForm();
+                			$('#formModal').modal('hide');  // Hide modal formModal
+                			$scope.showSuccessMessage("Data Disimpan", 2000);
+                		}
+                		$scope.kunciTombol = false;
+                	},
+                	function (response) {
+                		var error="Error : " + response.data.error.text;
+                		$scope.showErrorMessage(error,0);
+                		$scope.kunciTombol = false;
+                	});
+        	}
+        };
+
+        $scope.updateBarang = function(){
+        	if(confirm('Yakin edit data ini ?')){
+        		$scope.kunciTombol = true;
+        		$http.put(urlAPI +'/barang/'+ $scope.dataform.idBarang, $scope.dataform)
+        		.then(
+        			function(response){
+        				if(response){
+        					$scope.loadBarang();
+        					$scope.emptyForm();
+                			$('#formModal').modal('hide');  // Hide modal formModal
+                			$scope.showSuccessMessage("Data Diedit", 2000);
+                		}
+                		$scope.kunciTombol = false;
+                	},
+                	function (response) {
+                		var error="Error : " + response.data.error.text;
+                		$scope.showErrorMessage(error,0);
+                		$scope.kunciTombol = false;
+                	});
+        	}
+        };
+
+        $scope.deleteBarang = function(idBarang){
+        	if(confirm('Yakin hapus data ini ?')){
+        		$http.delete(urlAPI+'/barang/'+idBarang)
+        		.then(
+        			function(response){
+        				$scope.loadBarang();
+        				$scope.showSuccessMessage("Data Dihapus", 2000);
+        			},
+        			function (response) {
+        				var error="Error : " + response.data.error.text;
+        				$scope.showErrorMessage(error,0);
+        			});
+        	}
+        };
+
+        //========ANGULAR GROWL===========
+        $scope.showSuccessMessage = function(pesan, time) {
+        	growl.addSuccessMessage(pesan, {ttl:time});
+        }
+        $scope.showMessageInfo = function(pesan, time) {
+        	growl.addInfoMessage(pesan, {ttl:time});
+        }
+        $scope.showWarnMessage = function(pesan, time) {
+        	growl.addWarnMessage(pesan, {ttl:time});
+        }
+        $scope.showErrorMessage = function(pesan, time) {
+        	growl.addErrorMessage(pesan, {ttl:time});
+        }
+        //=================================
+
+    });
+
+</script>
