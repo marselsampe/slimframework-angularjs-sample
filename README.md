@@ -1,0 +1,1 @@
+# slimframework-angularjs-sample
